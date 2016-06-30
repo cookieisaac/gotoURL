@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+    "os"
 	"net/http"
 )
 
@@ -11,7 +12,7 @@ URL: <input type="text" name="url">
 <input type="submit" value="Add">
 </form>
 `
-var store = NewURLStore()
+var store = NewURLStore("store.gob")
 
 func main() {
 	http.HandleFunc("/", Redirect)
@@ -38,5 +39,6 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := store.Put(url)
-	fmt.Fprintf(w, "http://localhost:8080/%s", key)
+	hostname, _ := os.Hostname()
+	fmt.Fprintf(w, "http://%s:8080/%s", hostname, key)
 }
