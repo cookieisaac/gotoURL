@@ -34,6 +34,7 @@ After hitting `Enter`, you will be redirected to the corresponding page.
 1. Synchronized internal map as in memory data structure
 2. All the short URLs are persisted
 3. Cache process `Put` and persistence process `save` are decoupled by goroutines and channel to enhance concurrency
+4. `json` is used instead `gob` to support server failover
 
 ## Bonus: Install Go
 

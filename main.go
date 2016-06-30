@@ -17,7 +17,7 @@ var store *URLStore
 
 var (
 	listenAddr = flag.String("http", ":8080", "http listen address")
-	dataFile = flag.String("file", "store.gob", "data store file name")
+	dataFile = flag.String("file", "store.json", "data store file name")
 	hostname = flag.String("host", "localhost:8080", "hostname and port")
 )
 
