@@ -32,6 +32,8 @@ After hitting `Enter`, you will be redirected to the corresponding page.
 ## Highlights
 
 1. Synchronized internal map as in memory data structure
+2. All the short URLs are persisted
+3. Cache process `Put` and persistence process `save` are decoupled by goroutines and channel to enhance concurrency
 
 ## Bonus: Install Go
 

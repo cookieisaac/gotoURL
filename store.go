@@ -11,7 +11,7 @@ import (
 type URLStore struct {
 	urls 	map[string]string
 	mu 		sync.RWMutex
-	file 	*os.File
+	save 	chan record
 }
 
 type record struct {
@@ -19,12 +19,15 @@ type record struct {
 	URL string
 }
 
-func (s *URLStore) load() error {
-	if _, err := s.file.Seek(0, 0); err != nil {
+func (s *URLStore) load(filename string) error {
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Println("Error opening URLStore: ", err)
 		return err
 	}
-	d := gob.NewDecoder(s.file) 
-	var err error
+	defer f.Close()
+	
+	d := gob.NewDecoder(f) 
 	for err == nil {
 		var r record
 		if err = d.Decode(&r); err == nil {
@@ -35,27 +38,41 @@ func (s *URLStore) load() error {
 	if err == io.EOF {
 		return nil
 	}
+	log.Println("Error decoding URLStore: ", err)
 	return err
 }
 
-func (s *URLStore) save(key, url string) error {
-	e := gob.NewEncoder(s.file)
-	log.Println("Saving: ", key, url)
-	return e.Encode(record{key, url})
-}
 
-func NewURLStore(filename string) *URLStore {
-	s := &URLStore{ urls: make(map[string]string) }
+func (s *URLStore) saveLoop(filename string) {
 	f, err := os.OpenFile(filename, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatal("URLStore: ", err)
 	}
-	s.file = f
-	if err := s.load(); err != nil {
+	defer f.Close()
+	
+	e := gob.NewEncoder(f)
+	for {
+		r := <-s.save
+		if err := e.Encode(r); err != nil {
+			log.Println("URLStore: ", err)
+		}
+		log.Println("Saved: ", r.Key, r.URL)
+	}
+}
+
+const saveQueueLength = 1000
+func NewURLStore(filename string) *URLStore {
+	s := &URLStore{ 
+			urls: make(map[string]string),
+			save: make(chan record, saveQueueLength),
+		}
+	if err := s.load(filename); err != nil {
 		log.Println("Error loading data in URLStore: ", err)
 	}
+	go s.saveLoop(filename)
 	return s
 }
+
 
 func (s *URLStore) Get(key string) string {
 	s.mu.RLock()
@@ -89,9 +106,7 @@ func (s *URLStore) Put(url string) string {
 	for {
 		key := genKey(s.Count())
 		if s.Set(key, url) {
-			if err := s.save(key, url); err != nil {
-				log.Println("Error saving to URLStore")
-			}
+			s.save <- record{key, url}
 			log.Println("Saved key: ", key)
 			return key
 		}
